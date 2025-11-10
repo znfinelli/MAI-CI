@@ -82,24 +82,28 @@ class EvolutionStrategy:
         """
         Applies self-adaptive mutation (as per lecture slides).
         
-        1. Mutates the strategy parameter (sigma) using a log-normal shift.
+        This implements "Mutation (I)" from the slides:
+        - One sigma (mutation strength) per individual.
+        - One learning rate (tau_prime) for the log-normal update.
+
+        1. Mutates the strategy parameter (sigma).
         2. Mutates the object variables (x) using the *new* sigma.
         """
         
-        # 1. Mutate sigma: σ' = σ * exp(τ' * N_global(0,1) + τ * N_local(0,1))
-        # This is "Diagonal self-adaptive Mutation" (Mutation II) 
-        # (Though simplified here to one sigma, it uses both learning rates).
-        # We use np.random.randn() for N(0,1).
+        # 1. Mutate sigma: σ' = σ * exp(τ' * N_global(0,1))
+        # We only use the single global learning rate, tau_prime.
         tau_prime_norm = self.params.tau_prime * np.random.randn()
-        tau_norm = self.params.tau * np.random.randn()
-        new_sigma = sigma * np.exp(tau_prime_norm + tau_norm)
+        new_sigma = sigma * np.exp(tau_prime_norm)
+
+        # Ensure sigma doesn't become too small (a common issue)
+        # We can set a floor, e.g., 1e-8, to prevent stalling.
+        new_sigma = max(new_sigma, 1e-8)
         
         # 2. Mutate object variables: x' = x + σ' * N(0,I)
-        # We use the *new* sigma for the mutation[cite: 1378, 1403].
+        # We use the *new* sigma for the mutation.
         offspring = parent + new_sigma * np.random.randn(self.params.dim)
         
-        # 3. Enforce boundary constraints
-        # This is a simple "clipping" method.
+        # 3. Enforce boundary constraints (clipping)
         offspring = np.clip(offspring, self.lower_bounds, self.upper_bounds)
         
         return offspring, new_sigma

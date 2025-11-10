@@ -3,148 +3,179 @@ EVOLUTION STRATEGIES FOR FUNCTION OPTIMIZATION
 Master in Artificial Intelligence - Evolutionary Computation
 November 2025
 
-This script is the main entry point for our project. It orchestrates 
-the entire experimental pipeline:
-1.  Defines the set of experiments to run.
-2.  Initializes the ExperimentRunner (which handles the 30 independent runs).
-3.  Calls the runner for each experimental configuration.
-4.  Collects and aggregates all results into a single pandas DataFrame.
-5.  Generates and saves all required plots and CSV files to the 'outputs/' dir.
+This script runs the full comparative experiment:
+1.  Evolution Strategy (from-scratch implementation)
+2.  L-BFGS-B (derivative-based baseline from SciPy)
+
+It runs 30 independent trials for all configurations and saves
+all results and visualizations to the 'outputs/' directory.
 """
 
 import numpy as np
 import pandas as pd
 import warnings
 import os
+import time
+from scipy.optimize import minimize, Bounds
 
-# Import our custom modules from the 'src' package
 from src import (
     ExperimentRunner,
-    TestFunctions,  # We don't strictly need this, but good for clarity
+    TestFunctions,
     plot_convergence,
     plot_boxplots
 )
 
-# Suppress common warnings (e.g., from matplotlib) for a cleaner console output
 warnings.filterwarnings('ignore')
-
-# Set a global random seed for reproducibility, as required by the project brief.
-# This ensures our 30-run experiments are repeatable.
 np.random.seed(42)
+
+def run_baseline_experiment(func_name, dim, n_runs, max_gen, target_fitness):
+    """
+    Runs 30 trials for the Scipy L-BFGS-B baseline.
+    """
+    print(f"\n{'='*60}")
+    print(f"Running Baseline: L-BFGS-B on {func_name.upper()} (n={dim})")
+    print(f"{'='*60}")
+    
+    func = getattr(TestFunctions, func_name)
+    lower, upper = TestFunctions.get_bounds(func_name, dim)
+    scipy_bounds = Bounds(lower, upper)
+    
+    trial_results = []
+    
+    for run in range(n_runs):
+        if (run + 1) % 10 == 0 or run == 0:
+            print(f"  Starting run {run+1}/{n_runs}...")
+        
+        # Use the same random start for a fair comparison
+        x_start = np.random.uniform(lower, upper, dim)
+        
+        start_time = time.time()
+        
+        # L-BFGS-B is a quasi-Newton (derivative-based) method.
+        # We give it a comparable budget of function evaluations.
+        bfgs_result = minimize(
+            func, 
+            x_start, 
+            method='L-BFGS-B', 
+            bounds=scipy_bounds,
+            options={'maxfun': 100000} # Give it a large budget
+        )
+        
+        elapsed_time = time.time() - start_time
+        
+        trial_results.append({
+            'function': func_name,
+            'dimension': dim,
+            'mu': 'N/A',
+            'lambda': 'N/A',
+            'strategy': 'L-BFGS-B',  # Use 'strategy' as the method label
+            'run': run + 1,
+            'best_fitness': bfgs_result.fun,
+            'generations': bfgs_result.nit, # Use iterations as "generations"
+            'function_evals': bfgs_result.nfev,
+            'time': elapsed_time,
+            'converged': bfgs_result.fun <= target_fitness
+        })
+    
+    print("...Done!")
+    return pd.DataFrame(trial_results)
 
 
 def main():
     """Main experimental pipeline"""
     
     print("="*80)
-    print("EVOLUTION STRATEGIES FOR FUNCTION OPTIMIZATION")
+    print("EVOLUTION STRATEGIES VS. DERIVATIVE-BASED OPTIMIZATION")
     print("Master in AI - Evolutionary Computation")
     print("="*80)
     
-    # Initialize the runner. n_runs=30 for statistical rigor, per the project brief.
-    runner = ExperimentRunner(n_runs=30)
+    N_RUNS = 30
+    MAX_GEN = 500
+    TARGET_FITNESS = 1e-6
     
-    # --- Define Experimental Matrix ---
-    # We will compare (μ,λ)-ES ("comma") vs. (μ+λ)-ES ("plus")
-    # on two function types:
-    #   1. Sphere: Unimodal, simple benchmark to verify the algorithm works.
-    #   2. Rastrigin: Highly multimodal, a "difficult" function as per the brief.
-    # We will also test scalability by increasing dimension (n=10 vs n=20).
-    experiments = [
-        # --- Sphere function ---
-        {'func': 'sphere', 'dim': 10, 'mu': 15, 'lambda': 100, 'strategy': 'comma'},
+    # Initialize the ES runner
+    es_runner = ExperimentRunner(n_runs=N_RUNS)
+    
+    # --- Define experiments ---
+    es_experiments = [
         {'func': 'sphere', 'dim': 10, 'mu': 15, 'lambda': 100, 'strategy': 'plus'},
-        {'func': 'sphere', 'dim': 20, 'mu': 15, 'lambda': 100, 'strategy': 'comma'},
-        
-        # --- Rastrigin function ---
-        # Using a ~1:7 ratio for μ:λ as recommended in the slides for ES
-        # (specifically, the (μ,λ)[cite_start]-ES is often tuned for μ/λ ≈ 1/6 [cite: 88, 279]).
-        {'func': 'rastrigin', 'dim': 10, 'mu': 20, 'lambda': 140, 'strategy': 'comma'},
         {'func': 'rastrigin', 'dim': 10, 'mu': 20, 'lambda': 140, 'strategy': 'plus'},
-        # Increase μ and λ for higher dimension to maintain search power
-        {'func': 'rastrigin', 'dim': 20, 'mu': 30, 'lambda': 200, 'strategy': 'comma'},
     ]
     
+    baseline_experiments = [
+        {'func': 'sphere', 'dim': 10},
+        {'func': 'rastrigin', 'dim': 10},
+    ]
+
     all_results_list = []
     all_histories_dict = {}
     
-    # --- 1. Run all experiments ---
-    for exp_config in experiments:
-        # run_experiment handles the 30 independent trials for this config
-        df_results, list_of_histories = runner.run_experiment(
+    # --- 1. Run ES Experiments ---
+    for exp_config in es_experiments:
+        df, histories = es_runner.run_experiment(
             func_name=exp_config['func'],
             dim=exp_config['dim'],
             mu=exp_config['mu'],
             lambda_=exp_config['lambda'],
             strategy=exp_config['strategy'],
-            max_gen=500  # Set a generous generation limit
+            max_gen=MAX_GEN
         )
-        all_results_list.append(df_results)
+        all_results_list.append(df)
         
-        # Store all 30 fitness histories for this experiment config
-        # We'll average these for the convergence plots
-        key = (
-            f"{exp_config['func']}_d{exp_config['dim']}_"
-            f"μ{exp_config['mu']}_λ{exp_config['lambda']}_{exp_config['strategy']}"
+        key = f"ES_({exp_config['mu']}+{exp_config['lambda']})_{exp_config['func']}"
+        all_histories_dict[key] = histories
+        
+    # --- 2. Run Baseline Experiments ---
+    for exp_config in baseline_experiments:
+        df = run_baseline_experiment(
+            func_name=exp_config['func'],
+            dim=exp_config['dim'],
+            n_runs=N_RUNS,
+            max_gen=MAX_GEN,
+            target_fitness=TARGET_FITNESS
         )
-        all_histories_dict[key] = list_of_histories
-    
-    # Combine all results into a single DataFrame for analysis
+        all_results_list.append(df)
+
+    # --- 3. Save Artifacts (CSVs and Plots) ---
     combined_df = pd.concat(all_results_list, ignore_index=True)
     
-    # --- 2. Save Artifacts (CSVs and Plots) ---
     output_dir = os.path.join(os.path.dirname(__file__), 'outputs')
-    os.makedirs(output_dir, exist_ok=True) # Ensure dir exists
+    os.makedirs(output_dir, exist_ok=True)
 
-    # Save detailed, run-by-run results to CSV
     results_path = os.path.join(output_dir, 'results.csv')
     combined_df.to_csv(results_path, index=False)
     print(f"\n{'='*80}")
-    print(f"Detailed run data saved to: {results_path}")
+    print(f"Detailed results saved to: {results_path}")
     
-    # --- 3. Generate Visualizations (as required by brief) ---
+    # --- 4. Generate Visualizations ---
     print(f"\n{'='*80}")
     print("GENERATING VISUALIZATIONS...")
     print(f"{'='*80}")
     
-    # Plot convergence for Sphere
-    sphere_histories = {k: v for k, v in all_histories_dict.items() if 'sphere' in k}
-    if sphere_histories:
+    # Convergence plots
+    if all_histories_dict:
         plot_convergence(
-            sphere_histories,
-            'Convergence on Sphere Function (Avg. of 30 Runs)',
-            os.path.join(output_dir, 'convergence_sphere.png')
+            all_histories_dict,
+            'ES Convergence (Avg. of 30 Runs)',
+            os.path.join(output_dir, 'convergence_plots.png')
         )
     
-    # Plot convergence for Rastrigin
-    rastrigin_histories = {k: v for k, v in all_histories_dict.items() if 'rastrigin' in k}
-    if rastrigin_histories:
-        plot_convergence(
-            rastrigin_histories,
-            'Convergence on Rastrigin Function (Avg. of 30 Runs)',
-            os.path.join(output_dir, 'convergence_rastrigin.png')
-        )
-    
-    # Plot comparative boxplots
+    # Box plots
     plot_boxplots(combined_df, os.path.join(output_dir, 'comparison_boxplots.png'))
     
-    # --- 4. Generate Summary Statistics Table (for the report) ---
+    # --- 5. Generate Summary Statistics Table ---
     print(f"\n{'='*80}")
     print("SUMMARY STATISTICS (for final report)")
     print(f"{'='*80}")
     
-    # Aggregate results for the report
-    summary = combined_df.groupby(['function', 'dimension', 'mu', 'lambda', 'strategy']).agg({
+    summary = combined_df.groupby(['function', 'dimension', 'strategy']).agg({
         'best_fitness': ['mean', 'std', 'min'],
-        'generations': ['mean', 'std'],
         'function_evals': ['mean', 'std'],
         'time': ['mean', 'std'],
-        'converged': ['sum', 'mean'] # 'mean' gives success rate
+        'converged': ['sum', 'mean']
     }).round(6)
     
     print(summary)
-    
-    # Save summary table to CSV
     summary_path = os.path.join(output_dir, 'summary_statistics.csv')
     summary.to_csv(summary_path)
     print(f"\nSummary statistics saved to: {summary_path}")

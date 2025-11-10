@@ -60,25 +60,16 @@ def plot_convergence(histories_dict: Dict[str, List[List[float]]], title: str, s
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"  Plot saved: {save_path}")
-
-
-def plot_boxplots(df: pd.DataFrame, save_path: str):
-    """
-    Create a 2x2 grid of box plots to compare all experimental
-    configurations against all key metrics.
     
-    Args:
-        df (pd.DataFrame): The combined DataFrame from all experiments.
-        save_path (str): The full path to save the resulting PNG file.
-    """
+def plot_boxplots(df: pd.DataFrame, save_path: str):
+    """Create box plots comparing different configurations"""
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle('Comparison of ES Configurations (30 Runs)', fontsize=16, fontweight='bold')
+    fig.suptitle('Comparison of Optimization Methods (30 Runs)', fontsize=16, fontweight='bold')
     
     # --- Prepare data ---
-    # We group by the unique configurations
-    grouped = df.groupby(['function', 'dimension', 'mu', 'lambda', 'strategy'])
+    # Group by function and the *method* (which we've stored in 'strategy')
+    grouped = df.groupby(['function', 'strategy'])
     
-    # Create short labels for the x-axis
     labels = []
     data_by_metric = {
         'best_fitness': [],
@@ -87,8 +78,8 @@ def plot_boxplots(df: pd.DataFrame, save_path: str):
         'success_rate': []
     }
     
-    for (func, dim, mu, lam, strat), group in grouped:
-        labels.append(f"{func[:3].upper()}-d{dim}\n({mu}{',' if strat=='comma' else '+'}{lam})")
+    for (func, strategy), group in grouped:
+        labels.append(f"{func.upper()}\n({strategy})")
         data_by_metric['best_fitness'].append(group['best_fitness'].values)
         data_by_metric['generations'].append(group['generations'].values)
         data_by_metric['function_evals'].append(group['function_evals'].values)
@@ -100,14 +91,14 @@ def plot_boxplots(df: pd.DataFrame, save_path: str):
     ax.set_ylabel('Best Fitness', fontsize=11)
     ax.set_title('Final Best Fitness Distribution', fontsize=12, fontweight='bold')
     ax.tick_params(axis='x', rotation=45, labelsize=9)
-    ax.set_yscale('log') # Fitness is best viewed on a log scale
+    ax.set_yscale('log')
     ax.grid(True, linestyle='--', alpha=0.3)
     
-    # --- 2. Generations to Converge (Boxplot) ---
+    # --- 2. Generations/Iterations (Boxplot) ---
     ax = axes[0, 1]
     ax.boxplot(data_by_metric['generations'], labels=labels)
-    ax.set_ylabel('Generations', fontsize=11)
-    ax.set_title('Generations to Convergence', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Generations / Iterations', fontsize=11)
+    ax.set_title('Generations/Iterations to Convergence', fontsize=12, fontweight='bold')
     ax.tick_params(axis='x', rotation=45, labelsize=9)
     ax.grid(True, linestyle='--', alpha=0.3)
     
@@ -117,7 +108,7 @@ def plot_boxplots(df: pd.DataFrame, save_path: str):
     ax.set_ylabel('Function Evaluations', fontsize=11)
     ax.set_title('Total Function Evaluations', fontsize=12, fontweight='bold')
     ax.tick_params(axis='x', rotation=45, labelsize=9)
-    ax.set_yscale('log') # Evals can also vary widely
+    ax.set_yscale('log')
     ax.grid(True, linestyle='--', alpha=0.3)
     
     # --- 4. Success Rate (Bar Plot) ---
@@ -127,10 +118,10 @@ def plot_boxplots(df: pd.DataFrame, save_path: str):
     ax.set_xticklabels(labels, rotation=45, ha='right', fontsize=9)
     ax.set_ylabel('Success Rate (%)', fontsize=11)
     ax.set_title('Success Rate (Fitness < 1e-6)', fontsize=12, fontweight='bold')
-    ax.set_ylim([0, 105]) # Set Y-axis from 0 to 105 (for padding)
+    ax.set_ylim([0, 105])
     ax.grid(True, linestyle='--', alpha=0.3, axis='y')
     
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust for main title
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"  Plot saved: {save_path}")

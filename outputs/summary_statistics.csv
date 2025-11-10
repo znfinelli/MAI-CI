@@ -1,9 +1,7 @@
-,,,,,best_fitness,best_fitness,best_fitness,generations,generations,function_evals,function_evals,time,time,converged,converged
-,,,,,mean,std,min,mean,std,mean,std,mean,std,sum,mean
-function,dimension,mu,lambda,strategy,,,,,,,,,,,
-rastrigin,10,20,140,comma,35.586239,13.411667,9.949586,500.0,0.0,70020.0,0.0,0.598729,0.012183,0,0.0
-rastrigin,10,20,140,plus,34.45861,17.497427,5.969754,500.0,0.0,70020.0,0.0,0.594885,0.016032,0,0.0
-rastrigin,20,30,200,comma,91.834326,20.112559,46.763005,500.0,0.0,100030.0,0.0,0.925495,0.067358,0,0.0
-sphere,10,15,100,comma,1e-06,0.0,0.0,65.6,2.736723,6575.0,273.672344,0.047356,0.005273,30,1.0
-sphere,10,15,100,plus,1e-06,0.0,0.0,62.566667,2.896887,6271.666667,289.688695,0.044194,0.001974,30,1.0
-sphere,20,15,100,comma,1e-06,0.0,1e-06,139.233333,4.959723,13938.333333,495.972283,0.100149,0.004038,30,1.0
+,,,best_fitness,best_fitness,best_fitness,function_evals,function_evals,time,time,converged,converged
+,,,mean,std,min,mean,std,mean,std,sum,mean
+function,dimension,strategy,,,,,,,,,
+rastrigin,10,L-BFGS-B,73.162224,18.666433,42.783108,218.9,59.437217,0.002866,0.000721,0,0.0
+rastrigin,10,plus,31.772264,12.196655,11.939499,70020.0,0.0,0.664522,0.005287,0,0.0
+sphere,10,L-BFGS-B,0.0,0.0,0.0,38.866667,5.581579,0.000683,0.001026,30,1.0
+sphere,10,plus,1e-06,0.0,0.0,6725.0,423.735441,0.051825,0.004332,30,1.0

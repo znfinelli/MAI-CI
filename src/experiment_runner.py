@@ -65,8 +65,7 @@ class ExperimentRunner:
             lambda_=lambda_,
             dim=dim,
             sigma=0.5,  # Initial mutation strength
-            tau=tau,
-            tau_prime=tau_prime,
+            tau_prime=tau_prime, # Pass only the one we are using
             max_generations=max_gen,
             target_fitness=1e-6, # Convergence threshold
             strategy=strategy
