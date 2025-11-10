@@ -98,8 +98,13 @@ def main():
     
     # --- Define experiments ---
     es_experiments = [
+        # Sphere (Easy Function) - Elitist vs. Non-Elitist
         {'func': 'sphere', 'dim': 10, 'mu': 15, 'lambda': 100, 'strategy': 'plus'},
+        {'func': 'sphere', 'dim': 10, 'mu': 15, 'lambda': 100, 'strategy': 'comma'},
+        
+        # Rastrigin (Difficult Function) - Elitist vs. Non-Elitist
         {'func': 'rastrigin', 'dim': 10, 'mu': 20, 'lambda': 140, 'strategy': 'plus'},
+        {'func': 'rastrigin', 'dim': 10, 'mu': 20, 'lambda': 140, 'strategy': 'comma'},
     ]
     
     baseline_experiments = [
@@ -175,6 +180,10 @@ def main():
         'converged': ['sum', 'mean']
     }).round(6)
     
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.width', 1000)
+
     print(summary)
     summary_path = os.path.join(output_dir, 'summary_statistics.csv')
     summary.to_csv(summary_path)
