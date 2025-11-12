@@ -1,15 +1,29 @@
 from dataclasses import dataclass
 
-
 @dataclass
 class ESParams:
-    """Parameters for Evolution Strategy"""
-    mu: int  # Number of parents
-    lambda_: int  # Number of offspring
-    dim: int  # Problem dimension
-    sigma: float  # Initial mutation strength
-    tau: float  # Learning rate for sigma adaptation
-    tau_prime: float  # Global learning rate
-    max_generations: int  # Maximum generations
-    target_fitness: float  # Target fitness to stop
-    strategy: str  # 'comma' for (μ,λ) or 'plus' for (μ+λ)
+    """
+    A dataclass to hold all configuration parameters for a single
+    Evolution Strategy experiment. This keeps our function signatures
+    clean and makes experiments easy to configure and pass around.
+    """
+    
+    # --- Population Parameters ---
+    mu: int       # Number of parents (μ)
+    lambda_: int  # Number of offspring (λ)
+    
+    # --- Problem Parameters ---
+    dim: int      # Problem dimension (n)
+    
+    # --- Mutation Parameters (Self-Adaptation) ---
+    sigma: float  # Initial mutation strength (step size)
+    
+    # Learning rates for self-adaptive sigma, as per "Mutation (II)" (slide 16)
+    tau: float    # Learning rate (τ)
+    
+    # --- Runner Parameters ---
+    max_generations: int # Termination criterion: max generations
+    target_fitness: float  # Termination criterion: target fitness
+    
+    # --- Strategy Parameters ---
+    strategy: str # 'comma' for (μ,λ) or 'plus' for (μ+λ)
